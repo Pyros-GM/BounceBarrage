@@ -226,16 +226,24 @@ wss.on("connection", (socket) => {
             }
 
             // Back after a dropped connection: take our old place in the match.
+            // Render's proxy can take ~10 s to tell us a connection died, so the player may
+            // be back before we noticed they left: then the new connection replaces the old one.
             case "rejoin": {
                 const code = String(content.code || "").toUpperCase();
                 const oldUuid = String(content.uuid || "");
                 const room = rooms.get(code);
-                if (socket.roomId || !room || !room.away[oldUuid]) {
+                const stale = room ? room.players[oldUuid] : null;
+                if (socket.roomId || !room || !room.started || (!room.away[oldUuid] && !stale)) {
                     sendError(socket, "rejoin_failed");
                     break;
                 }
-                clearTimeout(room.away[oldUuid]);
-                delete room.away[oldUuid];
+                if (room.away[oldUuid]) {
+                    clearTimeout(room.away[oldUuid]);
+                    delete room.away[oldUuid];
+                } else if (stale !== socket) {
+                    stale.replaced = true;  // its close handler then leaves the room alone
+                    stale.terminate();
+                }
                 socket.uuid = oldUuid;  // same player as before, so paddle messages still match
                 socket.roomId = code;
                 room.players[oldUuid] = socket;
@@ -268,6 +276,7 @@ wss.on("connection", (socket) => {
     });
 
     socket.on("close", () => {
+        if (socket.replaced) return;  // a rejoin already took this player's place
         const uuid = socket.uuid;
         const code = socket.roomId;
         console.log(`Client disconnected: ${uuid}`);
