@@ -405,7 +405,7 @@ wss.on("close", () => clearInterval(heartbeat));
 // Until that variable is set, /verify answers {ok: true, verified: false} so coin purchases
 // keep working; once it's set, every purchase is checked with Google.
 const PACKAGE_NAME = process.env.PACKAGE_NAME || "com.eternalt.bouncebarrage";
-const COIN_PRODUCTS = new Set(["coins_500", "coins_1200", "coins_3000", "coins_7000"]);
+const COIN_PRODUCTS = new Set(["starter_pack", "coins_500", "coins_1200", "coins_3000", "coins_7000"]);
 let serviceAccount = null;
 try {
     if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
