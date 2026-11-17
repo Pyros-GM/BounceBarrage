@@ -15,6 +15,8 @@
 //    changing the phone's date
 //  - POST /verify: checks a Google Play coin purchase with Google before the game pays it
 //    out (needs GOOGLE_SERVICE_ACCOUNT_JSON; see verifyPurchase below)
+//  - GET /events: events.json (holiday dates, a skipped event, a sale), so they can change
+//    without a game update; the game has its own built-in calendar (events.gd)
 //  - hardening: 16 KB message limit, a ping every 15 s that drops connections that don't
 //    answer, and per-connection rate limits on messages and chat
 // ========================
@@ -30,6 +32,21 @@ app.set("trust proxy", 1);  // Render's proxy: req.ip is the player's real addre
 
 app.get("/", (req, res) => res.type("text/plain").send("ok"));
 app.get("/time", (req, res) => res.json({ now: Date.now() }));
+
+// Holiday events: events.json next to this file. Edit it on GitHub and Render redeploys.
+// Format (all optional; dates are the player's calendar days, both ends included):
+//   {"events": {"winter": {"start": "2026-12-10", "end": "2027-01-06"}, "summer": {"off": true}},
+//    "sale": {"percent": 20, "start": "2026-11-27", "end": "2026-11-30"}}
+// Unreadable or missing: {} (the game uses its built-in dates).
+const fs = require("fs");
+const path = require("path");
+app.get("/events", (req, res) => {
+    try {
+        res.json(JSON.parse(fs.readFileSync(path.join(__dirname, "events.json"), "utf8")));
+    } catch (e) {
+        res.json({});
+    }
+});
 
 const server = app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
